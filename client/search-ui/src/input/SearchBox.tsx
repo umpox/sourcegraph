@@ -51,13 +51,24 @@ export interface SearchBoxProps
 
     /** Set in JSContext only available to the web app. */
     isExternalServicesUserModeAll?: boolean
+
+    /** Called with the underlying Monaco editor instance on creation. */
+    onEditorCreated?: (editor: Monaco.editor.IStandaloneCodeEditor) => void
 }
 
 export const SearchBox: React.FunctionComponent<SearchBoxProps> = props => {
-    const { queryState } = props
+    const { queryState, onEditorCreated: onEditorCreatedCallback } = props
 
     const [editor, setEditor] = useState<Monaco.editor.IStandaloneCodeEditor>()
     const focusEditor = useCallback(() => editor?.focus(), [editor])
+
+    const onEditorCreated = useCallback(
+        (editor: Monaco.editor.IStandaloneCodeEditor) => {
+            setEditor(editor)
+            onEditorCreatedCallback?.(editor)
+        },
+        [onEditorCreatedCallback]
+    )
 
     return (
         <div className={classNames(styles.searchBox, props.hideHelpButton ? styles.searchBoxShadow : null)}>
@@ -79,7 +90,7 @@ export const SearchBox: React.FunctionComponent<SearchBoxProps> = props => {
                         {...props}
                         onHandleFuzzyFinder={props.onHandleFuzzyFinder}
                         className={styles.searchBoxInput}
-                        onEditorCreated={setEditor}
+                        onEditorCreated={onEditorCreated}
                     />
                     <Toggles
                         {...props}

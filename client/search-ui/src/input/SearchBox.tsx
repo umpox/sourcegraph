@@ -7,6 +7,7 @@ import { SearchContextInputProps, QueryState, SubmitSearchProps } from '@sourceg
 import { AuthenticatedUser } from '@sourcegraph/shared/src/auth'
 import { KeyboardShortcut } from '@sourcegraph/shared/src/keyboardShortcuts'
 import { PlatformContextProps } from '@sourcegraph/shared/src/platform/context'
+import { fetchStreamSuggestions as defaultFetchStreamSuggestions } from '@sourcegraph/shared/src/search/suggestions'
 import { TelemetryProps } from '@sourcegraph/shared/src/telemetry/telemetryService'
 import { ThemeProps } from '@sourcegraph/shared/src/theme'
 
@@ -33,6 +34,7 @@ export interface SearchBoxProps
     submitSearchOnSearchContextChange?: SubmitSearchProps['submitSearch']
     submitSearchOnToggle?: SubmitSearchProps['submitSearch']
     onFocus?: () => void
+    fetchStreamSuggestions?: typeof defaultFetchStreamSuggestions // Alternate implementation is used in the VS Code extension.
     onCompletionItemSelected?: () => void
     onSuggestionsInitialized?: (actions: { trigger: () => void }) => void
     autoFocus?: boolean

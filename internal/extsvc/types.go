@@ -130,6 +130,9 @@ const (
 	// TypeNpmPackages is the (api.ExternalRepoSpec).ServiceType value for Npm packages (JavaScript/TypeScript ecosystem libraries).
 	TypeNpmPackages = "npmPackages"
 
+	// TypeGoModules is the (api.ExternalRepoSpec).ServiceType value Go modules.
+	TypeGoModules = "goModules"
+
 	// TypeOther is the (api.ExternalRepoSpec).ServiceType value for other projects.
 	TypeOther = "other"
 

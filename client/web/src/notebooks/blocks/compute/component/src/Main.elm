@@ -133,7 +133,7 @@ init json =
                     , reverse = False
                     , excludeStopWords = False
                     }
-      , selectedTab = Chart
+      , selectedTab = WordCloud
       , debounce = 0
       , resultsMap = Dict.empty
       , serverless = False
@@ -423,6 +423,21 @@ dataView data =
         ]
 
 
+wordCloud : List DataValue -> E.Element Msg
+wordCloud data =
+    let
+        text =
+            List.concatMap (\{ name, value } -> List.repeat (truncate value) name) data
+                |> String.join " "
+    in
+    E.el []
+        (E.image []
+            { src = "https://quickchart.io/wordcloud?text=" ++ text
+            , description = "word cloud"
+            }
+        )
+
+
 viewDataFilter : DataFilter -> E.Element DataFilterMsg
 viewDataFilter dataFilter =
     E.row [ E.paddingXY 0 10 ]
@@ -478,12 +493,14 @@ type Tab
     = Chart
     | Table
     | Data
+    | WordCloud
 
 
 color =
     { skyBlue = E.rgb255 0x00 0xCB 0xEC
     , vividViolet = E.rgb255 0xA1 0x12 0xFF
     , vermillion = E.rgb255 0xFF 0x55 0x43
+    , yellow = E.rgb 0xFF 0x05 0x00
     }
 
 
@@ -525,6 +542,9 @@ tab thisTab selectedTab =
                 Data ->
                     color.skyBlue
 
+                WordCloud ->
+                    color.yellow
+
         text =
             case thisTab of
                 Chart ->
@@ -535,6 +555,9 @@ tab thisTab selectedTab =
 
                 Data ->
                     "Data"
+
+                WordCloud ->
+                    "Word Cloud"
     in
     E.el
         [ Border.widthEach borderWidths
@@ -559,6 +582,7 @@ outputRow selectedTab =
     E.row [ E.centerX, E.width E.fill ]
         [ tab Chart selectedTab
         , tab Table selectedTab
+        , tab WordCloud selectedTab
         , tab Data selectedTab
         ]
 
@@ -591,6 +615,9 @@ view model =
 
                     Data ->
                         dataView data
+
+                    WordCloud ->
+                        wordCloud data
                 ]
             ]
         )

@@ -426,13 +426,49 @@ dataView data =
 wordCloud : List DataValue -> E.Element Msg
 wordCloud data =
     let
-        text =
-            List.concatMap (\{ name, value } -> List.repeat (truncate value) name) data
-                |> String.join " "
+        sumWords =
+            data
+                |> List.map .value
+                |> List.sum
+
+        -- make 30 be data filter points
+        normalData =
+            List.map (\{ name, value } -> { name = name, value = value / sumWords }) data
+
+        selectionData =
+            List.map
+                (\{ name, value } ->
+                    { name = name
+                    , value =
+                        value
+                            * (10000
+                                / toFloat
+                                    (if List.length data > 10 then
+                                        List.length data
+
+                                     else
+                                        1000
+                                    )
+                              )
+                    }
+                )
+                normalData
+
+        textList =
+            List.concatMap (\{ name, value } -> List.repeat (ceiling value) name) selectionData
+
+        _ =
+            Debug.log "list length" (String.fromInt <| List.length data)
+
+        _ =
+            Debug.log "normal data" normalData
+
+        _ =
+            Debug.log "selection data" selectionData
     in
-    E.el []
+    E.el [ E.centerX ]
         (E.image []
-            { src = "https://quickchart.io/wordcloud?text=" ++ text
+            { src = "https://quickchart.io/wordcloud?text=" ++ String.join " " textList
             , description = "word cloud"
             }
         )

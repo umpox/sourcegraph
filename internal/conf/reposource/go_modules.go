@@ -16,6 +16,11 @@ type GoDependency struct {
 	mod module.Version
 }
 
+// NewGoDependency returns a GoDependency for the given module.Version.
+func NewGoDependency(mod module.Version) *GoDependency {
+	return &GoDependency{mod: mod}
+}
+
 // ParseGoDependency parses a string in a '<name>@<version>' format into an
 // GoDependency.
 func ParseGoDependency(dependency string) (*GoDependency, error) {
@@ -32,6 +37,12 @@ func ParseGoDependency(dependency string) (*GoDependency, error) {
 		return nil, err
 	}
 	return &GoDependency{mod: mod}, nil
+}
+
+// ParseGoDependencyFromRepoNae is a convenience function to parse a repo name in a
+// 'go/mod(@version)?' format into a GoDependency.
+func ParseGoDependencyFromRepoName(name string) (*GoDependency, error) {
+	return ParseGoDependency(strings.TrimPrefix(name, "go/"))
 }
 
 func (d *GoDependency) Scheme() string {

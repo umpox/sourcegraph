@@ -2,16 +2,19 @@ package repos
 
 import (
 	"context"
-	"github.com/inconshreveable/log15"
-	"github.com/sourcegraph/sourcegraph/internal/extsvc/gomodproxy"
-	"github.com/sourcegraph/sourcegraph/internal/httpcli"
+
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/sourcegraph/sourcegraph/internal/api"
 	dependenciesStore "github.com/sourcegraph/sourcegraph/internal/codeintel/dependencies/store"
 	"github.com/sourcegraph/sourcegraph/internal/conf/reposource"
 	"github.com/sourcegraph/sourcegraph/internal/database"
 	"github.com/sourcegraph/sourcegraph/internal/database/dbutil"
+	"github.com/sourcegraph/sourcegraph/internal/errcode"
 	"github.com/sourcegraph/sourcegraph/internal/extsvc"
+	"github.com/sourcegraph/sourcegraph/internal/extsvc/gomodproxy"
+	"github.com/sourcegraph/sourcegraph/internal/httpcli"
 	"github.com/sourcegraph/sourcegraph/internal/jsonc"
 	"github.com/sourcegraph/sourcegraph/internal/types"
 	"github.com/sourcegraph/sourcegraph/lib/errors"
@@ -68,6 +71,13 @@ func (s *GoModulesSource) ListRepos(ctx context.Context, results chan SourceResu
 	}
 
 	lastID := 0
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	sem := semaphore.NewWeighted(32)
+	g, ctx := errgroup.WithContext(ctx)
+
 	for {
 		depRepos, err := s.depsStore.ListDependencyRepos(ctx, dependenciesStore.ListDependencyReposOpts{
 			Scheme:      dependenciesStore.GoModulesScheme,
@@ -85,36 +95,31 @@ func (s *GoModulesSource) ListRepos(ctx context.Context, results chan SourceResu
 
 		lastID = depRepos[len(depRepos)-1].ID
 
-		for _, r := range depRepos {
-			dep, err := reposource.ParseGoDependency(dbDep.Name)
-			if err != nil {
-				log15.Error("failed to parse go package name retrieved from database", "package", dbDep.Name, "error", err)
-				continue
+		for _, depRepo := range depRepos {
+			if err := sem.Acquire(ctx, 1); err != nil {
+				return
 			}
 
-			goDependency := reposource.GoDependency{GoModule: parsedDbPackage, Version: dbDep.Version}
-			pkgKey := goDependency.PackageSyntax()
-			info := pkgVersions[pkgKey]
+			depRepo := depRepo
+			g.Go(func() error {
+				defer sem.Release(1)
 
-			if info == nil {
-				info, err = s.client.GetPackageInfo(ctx, goDependency.GoModule)
+				mod, err := s.client.GetVersion(ctx, depRepo.Name, depRepo.Version)
 				if err != nil {
-					pkgVersions[pkgKey] = &gopkg.PackageInfo{Versions: map[string]*gopkg.DependencyInfo{}}
-					continue
+					if errcode.IsNotFound(err) {
+						return nil
+					}
+					return err
 				}
 
-				pkgVersions[pkgKey] = info
-			}
+				dep := reposource.NewGoDependency(*mod)
+				repo := s.makeRepo(dep)
+				results <- SourceResult{Source: s, Repo: repo}
 
-			if _, hasVersion := info.Versions[goDependency.Version]; !hasVersion {
-				continue
-			}
-
-			repo := s.makeRepo(goDependency.GoModule, info.Description)
-			results <- SourceResult{Source: s, Repo: repo}
+				return nil
+			})
 		}
 	}
-	log15.Info("finish resolving go artifacts", "totalDB", totalDBFetched, "totalDBResolved", totalDBResolved, "totalConfig", len(goModules))
 }
 
 func (s *GoModulesSource) GetRepo(ctx context.Context, name string) (*types.Repo, error) {

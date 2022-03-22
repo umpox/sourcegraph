@@ -902,8 +902,8 @@ type GitoliteConnection struct {
 	Prefix string `json:"prefix"`
 }
 
-// GoModuleProxiesConnection description: Configuration for a connection to Go module proxies
-type GoModuleProxiesConnection struct {
+// GoModulesConnection description: Configuration for a connection to Go module proxies
+type GoModulesConnection struct {
 	// Dependencies description: An array of strings specifying Go modules to mirror in Sourcegraph.
 	Dependencies []string `json:"dependencies,omitempty"`
 	// RateLimit description: Rate limit applied when making background API requests to the go registry.

@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/url"
 	"path"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/sourcegraph/sourcegraph/internal/errcode"
 	"github.com/sourcegraph/sourcegraph/internal/httpcli"
 	"github.com/sourcegraph/sourcegraph/internal/ratelimit"
+	"github.com/sourcegraph/sourcegraph/lib/errors"
 	"github.com/sourcegraph/sourcegraph/schema"
 )
 
@@ -30,7 +32,7 @@ type Client struct {
 }
 
 // NewClient returns a new Client for the given configuration.
-func NewClient(config *schema.GoModuleProxiesConnection, cli httpcli.Doer) *Client {
+func NewClient(config *schema.GoModulesConnection, cli httpcli.Doer) *Client {
 	var requestsPerHour float64
 	if config.RateLimit == nil || !config.RateLimit.Enabled {
 		requestsPerHour = math.Inf(1)
@@ -93,7 +95,13 @@ func (c *Client) get(ctx context.Context, paths ...string) (respBody io.Reader, 
 			log15.Warn("go modules proxy client self-enforced API rate limit: request delayed longer than expected due to rate limit", "delay", d)
 		}
 
-		req, err := http.NewRequestWithContext(ctx, "GET", path.Join(baseURL, path.Join(paths...)), nil)
+		reqURL, err := url.Parse(baseURL)
+		if err != nil {
+			return nil, errors.Errorf("invalid go modules proxy URL %q", baseURL)
+		}
+		reqURL.Path = path.Join(paths...)
+
+		req, err := http.NewRequestWithContext(ctx, "GET", reqURL.String(), nil)
 		if err != nil {
 			return nil, err
 		}

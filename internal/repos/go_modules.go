@@ -25,14 +25,14 @@ import (
 // published go dependencies from the Go ecosystem.
 type GoModulesSource struct {
 	svc       *types.ExternalService
-	config    *schema.GoModuleProxiesConnection
+	config    *schema.GoModulesConnection
 	depsStore DependenciesStore
 	client    *gomodproxy.Client
 }
 
 // NewGoModulesSource returns a new GoModulesSource from the given external service.
 func NewGoModulesSource(svc *types.ExternalService, cf *httpcli.Factory) (*GoModulesSource, error) {
-	var c schema.GoModuleProxiesConnection
+	var c schema.GoModulesConnection
 	if err := jsonc.Unmarshal(svc.Config, &c); err != nil {
 		return nil, errors.Errorf("external service id=%d config error: %s", svc.ID, err)
 	}
@@ -154,6 +154,7 @@ func (s *GoModulesSource) makeRepo(dep *reposource.GoDependency) *types.Repo {
 				CloneURL: string(repoName),
 			},
 		},
+		Metadata: struct{}{},
 	}
 }
 
@@ -166,7 +167,7 @@ func (s *GoModulesSource) SetDB(db dbutil.DB) {
 	s.depsStore = dependenciesStore.GetStore(database.NewDB(db))
 }
 
-func goDependencies(connection *schema.GoModuleProxiesConnection) (dependencies []*reposource.GoDependency, err error) {
+func goDependencies(connection *schema.GoModulesConnection) (dependencies []*reposource.GoDependency, err error) {
 	for _, dep := range connection.Dependencies {
 		dependency, err := reposource.ParseGoDependency(dep)
 		if err != nil {

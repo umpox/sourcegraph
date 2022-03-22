@@ -16,9 +16,9 @@ type GoDependency struct {
 	mod module.Version
 }
 
-// ParseGoModDependency parses a string in a '<name>@<version>' format into an
+// ParseGoDependency parses a string in a '<name>@<version>' format into an
 // GoDependency.
-func ParseGoModDependency(dependency string) (*GoDependency, error) {
+func ParseGoDependency(dependency string) (*GoDependency, error) {
 	var mod module.Version
 	if i := strings.LastIndex(dependency, "@"); i == -1 {
 		mod.Path = dependency

@@ -9,9 +9,9 @@ import (
 	"github.com/sourcegraph/sourcegraph/internal/api"
 )
 
-func TestParseGoModDependency(t *testing.T) {
+func TestParseGoDependency(t *testing.T) {
 	t.Run("not enough fields", func(t *testing.T) {
-		_, err := ParseGoModDependency("cloud.google.com/go")
+		_, err := ParseGoDependency("cloud.google.com/go")
 		assert.Error(t, err)
 	})
 
@@ -33,7 +33,7 @@ func TestParseGoModDependency(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			dep, err := ParseGoModDependency(test.name)
+			dep, err := ParseGoDependency(test.name)
 			require.NoError(t, err)
 			assert.Equal(t, api.RepoName(test.wantRepoName), dep.RepoName())
 			assert.Equal(t, test.wantVersion, dep.PackageVersion())

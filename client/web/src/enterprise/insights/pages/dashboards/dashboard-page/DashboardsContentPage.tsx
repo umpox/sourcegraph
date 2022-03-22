@@ -47,7 +47,7 @@ export const DashboardsContentPage: React.FunctionComponent<DashboardsContentPag
 
     return (
         <>
-            <PageTitle title={currentDashboard?.title} />
+            <PageTitle title={`Dashboard ${currentDashboard?.title || ''}`} />
             <DashboardsContent telemetryService={telemetryService} dashboardID={dashboardID} dashboards={dashboards} />
         </>
     )

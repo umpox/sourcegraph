@@ -1,13 +1,16 @@
 import React, { useState, useCallback, useMemo } from 'react'
 
+import { insertTab } from '@codemirror/commands'
+import { tags, HighlightStyle, classHighlightStyle } from '@codemirror/highlight'
+import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
+import { Extension } from '@codemirror/state'
+import { EditorView, keymap } from '@codemirror/view'
 import classNames from 'classnames'
-import { noop } from 'lodash'
 import PencilIcon from 'mdi-react/PencilIcon'
 import PlayCircleOutlineIcon from 'mdi-react/PlayCircleOutlineIcon'
-import * as Monaco from 'monaco-editor'
 
+import { useCodeMirror } from '@sourcegraph/shared/src/components/CodeMirrorEditor'
 import { Markdown } from '@sourcegraph/shared/src/components/Markdown'
-import { MonacoEditor } from '@sourcegraph/shared/src/components/MonacoEditor'
 import { ThemeProps } from '@sourcegraph/shared/src/theme'
 import { Icon } from '@sourcegraph/wildcard'
 
@@ -18,10 +21,28 @@ import { NotebookBlock } from '../NotebookBlock'
 import { focusLastPositionInMonacoEditor, useFocusMonacoEditorOnMount } from '../useFocusMonacoEditorOnMount'
 import { useIsBlockInputFocused } from '../useIsBlockInputFocused'
 import { useModifierKeyLabel } from '../useModifierKeyLabel'
-import { MONACO_BLOCK_INPUT_OPTIONS, useMonacoBlockInput } from '../useMonacoBlockInput'
 
 import blockStyles from '../NotebookBlock.module.scss'
 import styles from './NotebookMarkdownBlock.module.scss'
+
+const markdownExtension: Extension[] = [
+    keymap.of([
+        {
+            // TODO: Maybe be smart about this an indent the line if it's the start
+            // of a list item.
+            // See also https://codemirror.net/6/examples/tab/ regarding how to
+            // handle tab properly.
+            key: 'Tab',
+            run: insertTab,
+        },
+    ]),
+    markdown({ base: markdownLanguage }),
+    classHighlightStyle,
+    HighlightStyle.define([
+        { tag: tags.monospace, class: styles.mkdCode },
+        { tag: tags.url, class: styles.mkdCode },
+    ]),
+]
 
 interface NotebookMarkdownBlockProps extends BlockProps<MarkdownBlock>, ThemeProps {}
 
@@ -37,29 +58,40 @@ export const NotebookMarkdownBlock: React.FunctionComponent<NotebookMarkdownBloc
     ...props
 }) => {
     const [isEditing, setIsEditing] = useState(!isReadOnly && input.initialFocusInput)
-    const [editor, setEditor] = useState<Monaco.editor.IStandaloneCodeEditor>()
+    const [container, setContainer] = useState<HTMLDivElement | null>(null)
 
-    const runBlock = useCallback(
-        (id: string) => {
-            onRunBlock(id)
-            setIsEditing(false)
-        },
-        [onRunBlock, setIsEditing]
-    )
+    const runBlock = useCallback(() => {
+        console.log('runBlock')
+        onRunBlock(id)
+        setIsEditing(false)
+        return true
+    }, [id, onRunBlock, setIsEditing])
 
     const onInputChange = useCallback((text: string) => onBlockInputChange(id, { type: 'md', input: { text } }), [
         id,
         onBlockInputChange,
     ])
 
-    useMonacoBlockInput({
-        editor,
-        id,
-        tabMovesFocus: false,
-        ...props,
-        onInputChange,
-        onRunBlock: runBlock,
-    })
+    const extensions: Extension[] = useMemo(
+        () => [
+            keymap.of([
+                {
+                    key: 'Mod-Enter',
+                    run: runBlock,
+                },
+            ]),
+            EditorView.updateListener.of(update => {
+                if (update.docChanged) {
+                    console.log(update.state.sliceDoc())
+                    onInputChange(update.state.sliceDoc())
+                }
+            }),
+            markdownExtension,
+        ],
+        [runBlock, onInputChange]
+    )
+
+    const editor = useCodeMirror(container, input.text, extensions)
 
     const editMarkdown = useCallback(() => {
         if (!isReadOnly) {
@@ -67,7 +99,7 @@ export const NotebookMarkdownBlock: React.FunctionComponent<NotebookMarkdownBloc
         }
     }, [isReadOnly, setIsEditing])
 
-    useFocusMonacoEditorOnMount({ editor, isEditing })
+    // useFocusMonacoEditorOnMount({ editor, isEditing })
 
     const commonMenuActions = useCommonBlockMenuActions({ id, isReadOnly, ...props })
 
@@ -93,7 +125,12 @@ export const NotebookMarkdownBlock: React.FunctionComponent<NotebookMarkdownBloc
         return action.concat(commonMenuActions)
     }, [isEditing, modifierKeyLabel, runBlock, editMarkdown, commonMenuActions])
 
-    const focusInput = useCallback(() => focusLastPositionInMonacoEditor(editor), [editor])
+    const focusInput = useCallback(() => {
+        editor?.dispatch({
+            selection: {anchor: editor.state.doc.length},
+            scrollIntoView: true,
+        })
+    }, [editor])
 
     const notebookBlockProps = useMemo(
         () => ({
@@ -129,18 +166,7 @@ export const NotebookMarkdownBlock: React.FunctionComponent<NotebookMarkdownBloc
             className={classNames(styles.input, (isInputFocused || isSelected) && blockStyles.selected)}
             {...notebookBlockProps}
         >
-            <div className={blockStyles.monacoWrapper}>
-                <MonacoEditor
-                    language="markdown"
-                    value={input.text}
-                    height="auto"
-                    isLightTheme={isLightTheme}
-                    editorWillMount={noop}
-                    onEditorCreated={setEditor}
-                    options={MONACO_BLOCK_INPUT_OPTIONS}
-                    border={false}
-                />
-            </div>
+            <div ref={setContainer} className={blockStyles.monacoWrapper} />
         </NotebookBlock>
     )
 }

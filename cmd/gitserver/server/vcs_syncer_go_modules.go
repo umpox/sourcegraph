@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -156,6 +155,18 @@ func (s *GoModulesSyncer) RemoteShowCommand(ctx context.Context, remoteURL *vcs.
 // moduleVersions returns the list of Go module versions for the given module.
 // The returned dependencies are sorted in descending semver order (newest first).
 func (s *GoModulesSyncer) moduleVersions(ctx context.Context, mod string) (versions []*reposource.GoDependency, err error) {
+	for _, d := range s.dependencies() {
+		dep, err := reposource.ParseGoDependency(d)
+		if err != nil {
+			log15.Warn("skipping malformed go dependency", "dep", d, "error", err)
+			continue
+		}
+
+		if dep.PackageSyntax() == mod {
+			versions = append(versions, dep)
+		}
+	}
+
 	depRepos, err := s.depsStore.ListDependencyRepos(ctx, dependenciesStore.ListDependencyReposOpts{
 		Scheme:      dependenciesStore.GoModulesScheme,
 		Name:        mod,
@@ -194,12 +205,12 @@ func (s *GoModulesSyncer) gitPushDependencyTag(ctx context.Context, bareGitDirec
 	}
 	defer os.RemoveAll(tmpDir)
 
-	zr, err := s.client.GetZip(ctx, dep.PackageSyntax(), dep.PackageVersion())
+	zipBytes, err := s.client.GetZip(ctx, dep.PackageSyntax(), dep.PackageVersion())
 	if err != nil {
 		return err
 	}
 
-	err = s.commitZip(ctx, dep, tmpDir, zr)
+	err = s.commitZip(ctx, dep, tmpDir, zipBytes)
 	if err != nil {
 		return err
 	}
@@ -232,26 +243,25 @@ func (s *GoModulesSyncer) gitPushDependencyTag(ctx context.Context, bareGitDirec
 
 // commitZip initializes a git repository in the given working directory and creates
 // a git commit in that contains all the file contents of the given zip archive.
-func (s *GoModulesSyncer) commitZip(ctx context.Context, dep *reposource.GoDependency, workDir string, zr io.Reader) error {
-	zipFilename := path.Join(workDir, dep.PackageManagerSyntax()+".zip")
-
-	zf, err := os.Create(zipFilename)
+func (s *GoModulesSyncer) commitZip(ctx context.Context, dep *reposource.GoDependency, workDir string, zipBytes []byte) error {
+	zipFilename := path.Join(workDir, "mod.zip")
+	err := os.WriteFile(zipFilename, zipBytes, 0666)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create go module zip file %q on disk", zipFilename)
 	}
 
-	_, err = io.Copy(zf, zr)
-	if err != nil {
-		return errors.Wrapf(err, "failed to write go module zip file %q to disk", zipFilename)
-	}
-
-	err = modzip.Unzip(workDir, dep.Version, zipFilename)
+	modDir := path.Join(workDir, "mod")
+	err = modzip.Unzip(modDir, dep.Version, zipFilename)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unzip go module zip file %q", zipFilename)
 	}
 
 	if err = os.RemoveAll(zipFilename); err != nil {
 		return errors.Wrapf(err, "failed to remove module zip file %q", zipFilename)
+	}
+
+	if err = stripSingleOutermostDirectory(workDir); err != nil {
+		return errors.Wrapf(err, "failed to strip single outer-most dir")
 	}
 
 	cmd := exec.CommandContext(ctx, "git", "init")

@@ -78,6 +78,12 @@ func (s *GoModulesSource) ListRepos(ctx context.Context, results chan SourceResu
 	sem := semaphore.NewWeighted(32)
 	g, ctx := errgroup.WithContext(ctx)
 
+	defer func() {
+		if err := g.Wait(); err != nil && err != context.Canceled {
+			results <- SourceResult{Source: s, Err: err}
+		}
+	}()
+
 	for {
 		depRepos, err := s.depsStore.ListDependencyRepos(ctx, dependenciesStore.ListDependencyReposOpts{
 			Scheme:      dependenciesStore.GoModulesScheme,
@@ -123,7 +129,7 @@ func (s *GoModulesSource) ListRepos(ctx context.Context, results chan SourceResu
 }
 
 func (s *GoModulesSource) GetRepo(ctx context.Context, name string) (*types.Repo, error) {
-	dep, err := reposource.ParseGoDependency(name)
+	dep, err := reposource.ParseGoDependencyFromRepoName(name)
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,6 @@
 package gomodproxy
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -49,17 +48,22 @@ func NewClient(config *schema.GoModulesConnection, cli httpcli.Doer) *Client {
 
 // GetVersion gets a single version of the given module if it exists.
 func (c *Client) GetVersion(ctx context.Context, mod, version string) (*module.Version, error) {
-	respBody, err := c.get(ctx, mod, "@v", version+".info")
+	escapedVersion, err := module.EscapeVersion(version)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to escape version")
+	}
+
+	respBody, err := c.get(ctx, mod, "@v", escapedVersion+".info")
 	if err != nil {
 		return nil, err
 	}
 
-	v := module.Version{Path: mod}
-	if err = json.NewDecoder(respBody).Decode(&v); err != nil {
+	var v struct{ Version string }
+	if err = json.Unmarshal(respBody, &v); err != nil {
 		return nil, err
 	}
 
-	return &v, nil
+	return &module.Version{Path: mod, Version: v.Version}, nil
 }
 
 // ListVersions list all versions of the given module.
@@ -69,20 +73,29 @@ func (c *Client) ListVersions(ctx context.Context, mod string) (vs []module.Vers
 		return nil, err
 	}
 
-	sc := bufio.NewScanner(respBody)
-	for sc.Scan() {
-		vs = append(vs, module.Version{Path: mod, Version: sc.Text()})
+	for _, version := range bytes.Split(respBody, []byte("\n")) {
+		vs = append(vs, module.Version{Path: mod, Version: string(version)})
 	}
 
-	return vs, sc.Err()
+	return vs, nil
 }
 
-// GetZip returns the zip archive of the given module and version.
-func (c *Client) GetZip(ctx context.Context, mod, version string) (zf io.Reader, err error) {
-	return c.get(ctx, mod, "@v", version+".zip")
+// GetZip returns the zip archive bytes of the given module and version.
+func (c *Client) GetZip(ctx context.Context, mod, version string) ([]byte, error) {
+	escapedVersion, err := module.EscapeVersion(version)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to escape version")
+	}
+
+	return c.get(ctx, mod, "@v", escapedVersion+".zip")
 }
 
-func (c *Client) get(ctx context.Context, paths ...string) (respBody io.Reader, err error) {
+func (c *Client) get(ctx context.Context, mod string, paths ...string) (respBody []byte, err error) {
+	escapedMod, err := module.EscapePath(mod)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to escape module path")
+	}
+
 	for _, baseURL := range c.urls {
 		limiter := ratelimit.DefaultRegistry.GetOrSet(baseURL, c.limiter)
 
@@ -99,7 +112,7 @@ func (c *Client) get(ctx context.Context, paths ...string) (respBody io.Reader, 
 		if err != nil {
 			return nil, errors.Errorf("invalid go modules proxy URL %q", baseURL)
 		}
-		reqURL.Path = path.Join(paths...)
+		reqURL.Path = path.Join(escapedMod, path.Join(paths...))
 
 		req, err := http.NewRequestWithContext(ctx, "GET", reqURL.String(), nil)
 		if err != nil {
@@ -115,7 +128,7 @@ func (c *Client) get(ctx context.Context, paths ...string) (respBody io.Reader, 
 	return respBody, err
 }
 
-func (c *Client) do(req *http.Request) (io.Reader, error) {
+func (c *Client) do(req *http.Request) ([]byte, error) {
 	resp, err := c.cli.Do(req)
 	if err != nil {
 		return nil, err
@@ -139,7 +152,7 @@ func (c *Client) do(req *http.Request) (io.Reader, error) {
 		return nil, &Error{Path: req.URL.Path, Code: resp.StatusCode, Message: string(bs)}
 	}
 
-	return bytes.NewReader(bs), nil
+	return bs, nil
 }
 
 // Error returned from an HTTP request to a Go module proxy.

@@ -79,7 +79,7 @@ func (d *GoDependency) RepoName() api.RepoName {
 }
 
 func (d *GoDependency) GitTagFromVersion() string {
-	return "v" + d.Version.Version
+	return d.Version.Version
 }
 
 func (d *GoDependency) Equal(other *GoDependency) bool {

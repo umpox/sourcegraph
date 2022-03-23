@@ -42,8 +42,8 @@ Referenced by:
  last_applied_at   | timestamp with time zone |           |          | 
 Indexes:
     "batch_changes_pkey" PRIMARY KEY, btree (id)
-    "batch_changes_unique_org_id" UNIQUE, btree (name, namespace_org_id) WHERE namespace_org_id IS NOT NULL
-    "batch_changes_unique_user_id" UNIQUE, btree (name, namespace_user_id) WHERE namespace_user_id IS NOT NULL
+    "batch_changes_unique_org_id" UNIQUE CONSTRAINT, btree (name, namespace_org_id) WHERE namespace_org_id IS NOT NULL
+    "batch_changes_unique_user_id" UNIQUE CONSTRAINT, btree (name, namespace_user_id) WHERE namespace_user_id IS NOT NULL
     "batch_changes_namespace_org_id" btree (namespace_org_id)
     "batch_changes_namespace_user_id" btree (namespace_user_id)
 Check constraints:
@@ -76,7 +76,7 @@ Triggers:
  encryption_key_id     | text                     |           | not null | ''::text
 Indexes:
     "batch_changes_site_credentials_pkey" PRIMARY KEY, btree (id)
-    "batch_changes_site_credentials_unique" UNIQUE, btree (external_service_type, external_service_id)
+    "batch_changes_site_credentials_unique" UNIQUE CONSTRAINT, btree (external_service_type, external_service_id)
     "batch_changes_site_credentials_credential_idx" btree ((encryption_key_id = ANY (ARRAY[''::text, 'previously-migrated'::text])))
 
 ```
@@ -665,7 +665,7 @@ Webhook actions configured on code monitors
  updated_at | timestamp with time zone |           | not null | now()
 Indexes:
     "critical_and_site_config_pkey" PRIMARY KEY, btree (id)
-    "critical_and_site_config_unique" UNIQUE, btree (id, type)
+    "critical_and_site_config_unique" UNIQUE CONSTRAINT, btree (id, type)
 
 ```
 
@@ -911,7 +911,7 @@ Foreign-key constraints:
  token_expires_at  | timestamp with time zone |           |          | 
 Indexes:
     "external_services_pkey" PRIMARY KEY, btree (id)
-    "kind_cloud_default" UNIQUE, btree (kind, cloud_default) WHERE cloud_default = true AND deleted_at IS NULL
+    "kind_cloud_default" UNIQUE CONSTRAINT, btree (kind, cloud_default) WHERE cloud_default = true AND deleted_at IS NULL
     "external_services_has_webhooks_idx" btree (has_webhooks)
     "external_services_namespace_org_id_idx" btree (namespace_org_id)
     "external_services_namespace_user_id_idx" btree (namespace_user_id)
@@ -1549,7 +1549,7 @@ Stores the retention policy of code intellience data for a repository.
  queued_at              | timestamp with time zone |           |          | 
 Indexes:
     "lsif_uploads_pkey" PRIMARY KEY, btree (id)
-    "lsif_uploads_repository_id_commit_root_indexer" UNIQUE, btree (repository_id, commit, root, indexer) WHERE state = 'completed'::text
+    "lsif_uploads_repository_id_commit_root_indexer" UNIQUE CONSTRAINT, btree (repository_id, commit, root, indexer) WHERE state = 'completed'::text
     "lsif_uploads_associated_index_id" btree (associated_index_id)
     "lsif_uploads_commit_last_checked_at" btree (commit_last_checked_at) WHERE state <> 'deleted'::text
     "lsif_uploads_committed_at" btree (committed_at) WHERE state = 'completed'::text
@@ -1780,7 +1780,7 @@ Business statistics for organizations
  deleted_at        | timestamp with time zone |           |          | 
 Indexes:
     "orgs_pkey" PRIMARY KEY, btree (id)
-    "orgs_name" UNIQUE, btree (name) WHERE deleted_at IS NULL
+    "orgs_name" UNIQUE CONSTRAINT, btree (name) WHERE deleted_at IS NULL
 Check constraints:
     "orgs_display_name_max_length" CHECK (char_length(display_name) <= 255)
     "orgs_name_max_length" CHECK (char_length(name::text) <= 255)
@@ -1984,7 +1984,7 @@ Referenced by:
  source_map            | text                     |           |          | 
 Indexes:
     "registry_extension_releases_pkey" PRIMARY KEY, btree (id)
-    "registry_extension_releases_version" UNIQUE, btree (registry_extension_id, release_version) WHERE release_version IS NOT NULL
+    "registry_extension_releases_version" UNIQUE CONSTRAINT, btree (registry_extension_id, release_version) WHERE release_version IS NOT NULL
     "registry_extension_releases_registry_extension_id" btree (registry_extension_id, release_tag, created_at DESC) WHERE deleted_at IS NULL
     "registry_extension_releases_registry_extension_id_created_at" btree (registry_extension_id, created_at) WHERE deleted_at IS NULL
 Foreign-key constraints:
@@ -2008,8 +2008,8 @@ Foreign-key constraints:
  deleted_at        | timestamp with time zone |           |          | 
 Indexes:
     "registry_extensions_pkey" PRIMARY KEY, btree (id)
-    "registry_extensions_publisher_name" UNIQUE, btree (COALESCE(publisher_user_id, 0), COALESCE(publisher_org_id, 0), name) WHERE deleted_at IS NULL
-    "registry_extensions_uuid" UNIQUE, btree (uuid)
+    "registry_extensions_publisher_name" UNIQUE CONSTRAINT, btree (COALESCE(publisher_user_id, 0), COALESCE(publisher_org_id, 0), name) WHERE deleted_at IS NULL
+    "registry_extensions_uuid" UNIQUE CONSTRAINT, btree (uuid)
 Check constraints:
     "registry_extensions_name_length" CHECK (char_length(name::text) > 0 AND char_length(name::text) <= 128)
     "registry_extensions_name_valid_chars" CHECK (name ~ '^[a-zA-Z0-9](?:[a-zA-Z0-9]|[_.-](?=[a-zA-Z0-9]))*$'::citext)
@@ -2044,7 +2044,7 @@ Referenced by:
  blocked               | jsonb                    |           |          | 
 Indexes:
     "repo_pkey" PRIMARY KEY, btree (id)
-    "repo_external_unique_idx" UNIQUE, btree (external_service_type, external_service_id, external_id)
+    "repo_external_unique_idx" UNIQUE CONSTRAINT, btree (external_service_type, external_service_id, external_id)
     "repo_name_unique" UNIQUE CONSTRAINT, btree (name) DEFERRABLE
     "repo_archived" btree (archived)
     "repo_blocked_idx" btree ((blocked IS NOT NULL))
@@ -2164,9 +2164,9 @@ Foreign-key constraints:
  query             | text                     |           |          | 
 Indexes:
     "search_contexts_pkey" PRIMARY KEY, btree (id)
-    "search_contexts_name_namespace_org_id_unique" UNIQUE, btree (name, namespace_org_id) WHERE namespace_org_id IS NOT NULL
-    "search_contexts_name_namespace_user_id_unique" UNIQUE, btree (name, namespace_user_id) WHERE namespace_user_id IS NOT NULL
-    "search_contexts_name_without_namespace_unique" UNIQUE, btree (name) WHERE namespace_user_id IS NULL AND namespace_org_id IS NULL
+    "search_contexts_name_namespace_org_id_unique" UNIQUE CONSTRAINT, btree (name, namespace_org_id) WHERE namespace_org_id IS NOT NULL
+    "search_contexts_name_namespace_user_id_unique" UNIQUE CONSTRAINT, btree (name, namespace_user_id) WHERE namespace_user_id IS NOT NULL
+    "search_contexts_name_without_namespace_unique" UNIQUE CONSTRAINT, btree (name) WHERE namespace_user_id IS NULL AND namespace_org_id IS NULL
     "search_contexts_query_idx" btree (query)
 Check constraints:
     "search_contexts_has_one_or_no_namespace" CHECK (namespace_user_id IS NULL OR namespace_org_id IS NULL)
@@ -2255,7 +2255,7 @@ Foreign-key constraints:
  path_excludes | text[]                   |           |          | 
  updated_at    | timestamp with time zone |           | not null | now()
 Indexes:
-    "sub_repo_permissions_repo_id_user_id_version_uindex" UNIQUE, btree (repo_id, user_id, version)
+    "sub_repo_permissions_repo_id_user_id_version_uindex" UNIQUE CONSTRAINT, btree (repo_id, user_id, version)
     "sub_repo_perms_user_id" btree (user_id)
 Foreign-key constraints:
     "sub_repo_permissions_repo_id_fk" FOREIGN KEY (repo_id) REFERENCES repo(id) ON DELETE CASCADE
@@ -2342,8 +2342,8 @@ Foreign-key constraints:
  is_primary                | boolean                  |           | not null | false
 Indexes:
     "user_emails_no_duplicates_per_user" UNIQUE CONSTRAINT, btree (user_id, email)
-    "user_emails_user_id_is_primary_idx" UNIQUE, btree (user_id, is_primary) WHERE is_primary = true
-    "user_emails_unique_verified_email" EXCLUDE USING btree (email WITH =) WHERE (verified_at IS NOT NULL)
+    "user_emails_user_id_is_primary_idx" UNIQUE CONSTRAINT, btree (user_id, is_primary) WHERE is_primary = true
+    "user_emails_unique_verified_email" EXCLUDE USING btree (email) WHERE verified_at IS NOT NULL
 Foreign-key constraints:
     "user_emails_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id)
 
@@ -2369,7 +2369,7 @@ Foreign-key constraints:
  encryption_key_id | text                     |           | not null | ''::text
 Indexes:
     "user_external_accounts_pkey" PRIMARY KEY, btree (id)
-    "user_external_accounts_account" UNIQUE, btree (service_type, service_id, client_id, account_id) WHERE deleted_at IS NULL
+    "user_external_accounts_account" UNIQUE CONSTRAINT, btree (service_type, service_id, client_id, account_id) WHERE deleted_at IS NULL
     "user_external_accounts_user_id" btree (user_id) WHERE deleted_at IS NULL
 Foreign-key constraints:
     "user_external_accounts_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id)
@@ -2448,8 +2448,8 @@ Foreign-key constraints:
  searchable              | boolean                  |           | not null | true
 Indexes:
     "users_pkey" PRIMARY KEY, btree (id)
-    "users_billing_customer_id" UNIQUE, btree (billing_customer_id) WHERE deleted_at IS NULL
-    "users_username" UNIQUE, btree (username) WHERE deleted_at IS NULL
+    "users_billing_customer_id" UNIQUE CONSTRAINT, btree (billing_customer_id) WHERE deleted_at IS NULL
+    "users_username" UNIQUE CONSTRAINT, btree (username) WHERE deleted_at IS NULL
     "users_created_at_idx" btree (created_at)
 Check constraints:
     "users_display_name_max_length" CHECK (char_length(display_name) <= 255)
@@ -2548,21 +2548,6 @@ Foreign-key constraints:
 ```
 
 # View "public.branch_changeset_specs_and_changesets"
-```
-        Column         |  Type   | Collation | Nullable | Default 
------------------------+---------+-----------+----------+---------
- changeset_spec_id     | bigint  |           |          | 
- changeset_id          | bigint  |           |          | 
- repo_id               | integer |           |          | 
- batch_spec_id         | bigint  |           |          | 
- owner_batch_change_id | bigint  |           |          | 
- repo_name             | citext  |           |          | 
- changeset_name        | text    |           |          | 
- external_state        | text    |           |          | 
- publication_state     | text    |           |          | 
- reconciler_state      | text    |           |          | 
-
-```
 
 ## View query:
 
@@ -2586,23 +2571,6 @@ Foreign-key constraints:
 ```
 
 # View "public.external_service_sync_jobs_with_next_sync_at"
-```
-       Column        |           Type           | Collation | Nullable | Default 
----------------------+--------------------------+-----------+----------+---------
- id                  | integer                  |           |          | 
- state               | text                     |           |          | 
- failure_message     | text                     |           |          | 
- queued_at           | timestamp with time zone |           |          | 
- started_at          | timestamp with time zone |           |          | 
- finished_at         | timestamp with time zone |           |          | 
- process_after       | timestamp with time zone |           |          | 
- num_resets          | integer                  |           |          | 
- num_failures        | integer                  |           |          | 
- execution_logs      | json[]                   |           |          | 
- external_service_id | bigint                   |           |          | 
- next_sync_at        | timestamp with time zone |           |          | 
-
-```
 
 ## View query:
 
@@ -2624,33 +2592,6 @@ Foreign-key constraints:
 ```
 
 # View "public.lsif_dumps"
-```
-         Column         |           Type           | Collation | Nullable | Default 
-------------------------+--------------------------+-----------+----------+---------
- id                     | integer                  |           |          | 
- commit                 | text                     |           |          | 
- root                   | text                     |           |          | 
- queued_at              | timestamp with time zone |           |          | 
- uploaded_at            | timestamp with time zone |           |          | 
- state                  | text                     |           |          | 
- failure_message        | text                     |           |          | 
- started_at             | timestamp with time zone |           |          | 
- finished_at            | timestamp with time zone |           |          | 
- repository_id          | integer                  |           |          | 
- indexer                | text                     |           |          | 
- indexer_version        | text                     |           |          | 
- num_parts              | integer                  |           |          | 
- uploaded_parts         | integer[]                |           |          | 
- process_after          | timestamp with time zone |           |          | 
- num_resets             | integer                  |           |          | 
- upload_size            | bigint                   |           |          | 
- num_failures           | integer                  |           |          | 
- associated_index_id    | bigint                   |           |          | 
- expired                | boolean                  |           |          | 
- last_retention_scan_at | timestamp with time zone |           |          | 
- processed_at           | timestamp with time zone |           |          | 
-
-```
 
 ## View query:
 
@@ -2682,34 +2623,6 @@ Foreign-key constraints:
 ```
 
 # View "public.lsif_dumps_with_repository_name"
-```
-         Column         |           Type           | Collation | Nullable | Default 
-------------------------+--------------------------+-----------+----------+---------
- id                     | integer                  |           |          | 
- commit                 | text                     |           |          | 
- root                   | text                     |           |          | 
- queued_at              | timestamp with time zone |           |          | 
- uploaded_at            | timestamp with time zone |           |          | 
- state                  | text                     |           |          | 
- failure_message        | text                     |           |          | 
- started_at             | timestamp with time zone |           |          | 
- finished_at            | timestamp with time zone |           |          | 
- repository_id          | integer                  |           |          | 
- indexer                | text                     |           |          | 
- indexer_version        | text                     |           |          | 
- num_parts              | integer                  |           |          | 
- uploaded_parts         | integer[]                |           |          | 
- process_after          | timestamp with time zone |           |          | 
- num_resets             | integer                  |           |          | 
- upload_size            | bigint                   |           |          | 
- num_failures           | integer                  |           |          | 
- associated_index_id    | bigint                   |           |          | 
- expired                | boolean                  |           |          | 
- last_retention_scan_at | timestamp with time zone |           |          | 
- processed_at           | timestamp with time zone |           |          | 
- repository_name        | citext                   |           |          | 
-
-```
 
 ## View query:
 
@@ -2743,31 +2656,6 @@ Foreign-key constraints:
 ```
 
 # View "public.lsif_indexes_with_repository_name"
-```
-     Column      |           Type           | Collation | Nullable | Default 
------------------+--------------------------+-----------+----------+---------
- id              | bigint                   |           |          | 
- commit          | text                     |           |          | 
- queued_at       | timestamp with time zone |           |          | 
- state           | text                     |           |          | 
- failure_message | text                     |           |          | 
- started_at      | timestamp with time zone |           |          | 
- finished_at     | timestamp with time zone |           |          | 
- repository_id   | integer                  |           |          | 
- process_after   | timestamp with time zone |           |          | 
- num_resets      | integer                  |           |          | 
- num_failures    | integer                  |           |          | 
- docker_steps    | jsonb[]                  |           |          | 
- root            | text                     |           |          | 
- indexer         | text                     |           |          | 
- indexer_args    | text[]                   |           |          | 
- outfile         | text                     |           |          | 
- log_contents    | text                     |           |          | 
- execution_logs  | json[]                   |           |          | 
- local_steps     | text[]                   |           |          | 
- repository_name | citext                   |           |          | 
-
-```
 
 ## View query:
 
@@ -2798,33 +2686,6 @@ Foreign-key constraints:
 ```
 
 # View "public.lsif_uploads_with_repository_name"
-```
-         Column         |           Type           | Collation | Nullable | Default 
-------------------------+--------------------------+-----------+----------+---------
- id                     | integer                  |           |          | 
- commit                 | text                     |           |          | 
- root                   | text                     |           |          | 
- queued_at              | timestamp with time zone |           |          | 
- uploaded_at            | timestamp with time zone |           |          | 
- state                  | text                     |           |          | 
- failure_message        | text                     |           |          | 
- started_at             | timestamp with time zone |           |          | 
- finished_at            | timestamp with time zone |           |          | 
- repository_id          | integer                  |           |          | 
- indexer                | text                     |           |          | 
- indexer_version        | text                     |           |          | 
- num_parts              | integer                  |           |          | 
- uploaded_parts         | integer[]                |           |          | 
- process_after          | timestamp with time zone |           |          | 
- num_resets             | integer                  |           |          | 
- upload_size            | bigint                   |           |          | 
- num_failures           | integer                  |           |          | 
- associated_index_id    | bigint                   |           |          | 
- expired                | boolean                  |           |          | 
- last_retention_scan_at | timestamp with time zone |           |          | 
- repository_name        | citext                   |           |          | 
-
-```
 
 ## View query:
 
@@ -2857,50 +2718,6 @@ Foreign-key constraints:
 ```
 
 # View "public.reconciler_changesets"
-```
-          Column          |                     Type                     | Collation | Nullable | Default 
---------------------------+----------------------------------------------+-----------+----------+---------
- id                       | bigint                                       |           |          | 
- batch_change_ids         | jsonb                                        |           |          | 
- repo_id                  | integer                                      |           |          | 
- queued_at                | timestamp with time zone                     |           |          | 
- created_at               | timestamp with time zone                     |           |          | 
- updated_at               | timestamp with time zone                     |           |          | 
- metadata                 | jsonb                                        |           |          | 
- external_id              | text                                         |           |          | 
- external_service_type    | text                                         |           |          | 
- external_deleted_at      | timestamp with time zone                     |           |          | 
- external_branch          | text                                         |           |          | 
- external_updated_at      | timestamp with time zone                     |           |          | 
- external_state           | text                                         |           |          | 
- external_review_state    | text                                         |           |          | 
- external_check_state     | text                                         |           |          | 
- diff_stat_added          | integer                                      |           |          | 
- diff_stat_changed        | integer                                      |           |          | 
- diff_stat_deleted        | integer                                      |           |          | 
- sync_state               | jsonb                                        |           |          | 
- current_spec_id          | bigint                                       |           |          | 
- previous_spec_id         | bigint                                       |           |          | 
- publication_state        | text                                         |           |          | 
- owned_by_batch_change_id | bigint                                       |           |          | 
- reconciler_state         | text                                         |           |          | 
- failure_message          | text                                         |           |          | 
- started_at               | timestamp with time zone                     |           |          | 
- finished_at              | timestamp with time zone                     |           |          | 
- process_after            | timestamp with time zone                     |           |          | 
- num_resets               | integer                                      |           |          | 
- closing                  | boolean                                      |           |          | 
- num_failures             | integer                                      |           |          | 
- log_contents             | text                                         |           |          | 
- execution_logs           | json[]                                       |           |          | 
- syncer_error             | text                                         |           |          | 
- external_title           | text                                         |           |          | 
- worker_hostname          | text                                         |           |          | 
- ui_publication_state     | batch_changes_changeset_ui_publication_state |           |          | 
- last_heartbeat_at        | timestamp with time zone                     |           |          | 
- external_fork_namespace  | citext                                       |           |          | 
-
-```
 
 ## View query:
 
@@ -2954,13 +2771,6 @@ Foreign-key constraints:
 ```
 
 # View "public.site_config"
-```
-   Column    |  Type   | Collation | Nullable | Default 
--------------+---------+-----------+----------+---------
- site_id     | uuid    |           |          | 
- initialized | boolean |           |          | 
-
-```
 
 ## View query:
 
@@ -2971,20 +2781,6 @@ Foreign-key constraints:
 ```
 
 # View "public.tracking_changeset_specs_and_changesets"
-```
-      Column       |  Type   | Collation | Nullable | Default 
--------------------+---------+-----------+----------+---------
- changeset_spec_id | bigint  |           |          | 
- changeset_id      | bigint  |           |          | 
- repo_id           | integer |           |          | 
- batch_spec_id     | bigint  |           |          | 
- repo_name         | citext  |           |          | 
- changeset_name    | text    |           |          | 
- external_state    | text    |           |          | 
- publication_state | text    |           |          | 
- reconciler_state  | text    |           |          | 
-
-```
 
 ## View query:
 
@@ -3047,4 +2843,3 @@ Foreign-key constraints:
 
 - record
 - snapshot
-

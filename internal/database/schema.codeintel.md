@@ -457,7 +457,7 @@ Each uniques sequence of space-separated tags being stored in the API docs searc
  file_path | text    |           |          | 
 Indexes:
     "lsif_data_documentation_mappings_pkey" PRIMARY KEY, btree (dump_id, path_id)
-    "lsif_data_documentation_mappings_inverse_unique_idx" UNIQUE, btree (dump_id, result_id)
+    "lsif_data_documentation_mappings_inverse_unique_idx" UNIQUE CONSTRAINT, btree (dump_id, result_id)
 
 ```
 

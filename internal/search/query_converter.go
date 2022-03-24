@@ -302,7 +302,9 @@ func QueryToZoektQuery(b query.Basic, resultTypes result.Types, feat *Features, 
 	}
 
 	var and []zoekt.Q
-	and = append(and, q)
+	if q != nil {
+		and = append(and, q)
+	}
 
 	// zoekt also uses regular expressions for file paths
 	// TODO PathPatternsAreCaseSensitive

@@ -15,11 +15,11 @@ All notable changes to Sourcegraph are documented in this file.
 
 ### Added
 
-- Add "getting started/quick start checklist for authenticated users" [TODO:]
+- Add "getting started/quick start checklist for authenticated users" [#32882](https://github.com/sourcegraph/sourcegraph/pull/32882)
 
 ### Changed
 
-- Update "getting started checklist for visitors" to a new design [TODO:]
+- Update "getting started/quick start checklist for visitors" to a new design [#32882](https://github.com/sourcegraph/sourcegraph/pull/32882)
 
 ### Fixed
 
